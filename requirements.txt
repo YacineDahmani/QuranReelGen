@@ -1,0 +1,10 @@
+requests
+numpy
+fastapi
+pydantic
+moviepy
+Pillow
+arabic-reshaper
+python-bidi
+uvicorn
+rich
