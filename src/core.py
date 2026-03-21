@@ -77,8 +77,11 @@ def create_text_image(
 
     configuration = {'delete_harakat': False}
     reshaper = arabic_reshaper.ArabicReshaper(configuration=configuration)
-    reshaped_text = reshaper.reshape(arabic_text)
-    bidi_text = get_display(reshaped_text)
+
+    def shape_arabic_for_rendering(text: str) -> str:
+        # Apply Arabic reshaping + BiDi on each rendered line to preserve reading order.
+        reshaped_text = reshaper.reshape(text)
+        return get_display(reshaped_text)
 
     font_ar = get_font(FONT_ARABIC, font_size)
 
@@ -92,13 +95,36 @@ def create_text_image(
             if (bbox[2] - bbox[0]) <= max_w:
                 curr_line.append(word)
             else:
-                lines.append(' '.join(curr_line))
+                if curr_line:
+                    lines.append(' '.join(curr_line))
                 curr_line = [word]
         if curr_line: lines.append(' '.join(curr_line))
         return lines
 
+    def wrap_arabic_text(text, font, max_w):
+        logical_lines = []
+        words = text.split()
+        curr_line = []
+
+        for word in words:
+            candidate_logical = ' '.join(curr_line + [word])
+            candidate_visual = shape_arabic_for_rendering(candidate_logical)
+            bbox = draw.textbbox((0, 0), candidate_visual, font=font)
+
+            if (bbox[2] - bbox[0]) <= max_w:
+                curr_line.append(word)
+            else:
+                if curr_line:
+                    logical_lines.append(' '.join(curr_line))
+                curr_line = [word]
+
+        if curr_line:
+            logical_lines.append(' '.join(curr_line))
+
+        return [shape_arabic_for_rendering(line) for line in logical_lines]
+
     max_width = size[0] - 150
-    ar_lines = wrap_text(bidi_text, font_ar, max_width)
+    ar_lines = wrap_arabic_text(arabic_text, font_ar, max_width)
 
     en_lines = []
     font_en = None
